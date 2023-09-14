@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import { DocumentEditor } from "@onlyoffice/document-editor-react";
 
@@ -6,26 +6,35 @@ function TabBar() {
   const [activeTab, setActiveTab] = useState("editor");
   const [studentConfigData, setStudentConfigData] = useState(null);
   const [solutionConfigData, setSolutionData] = useState(null);
-  const [saveAsEvent, setSaveAsEvent] = useState(null);
+  const [showPopup, setShowPopup] = useState(false);
+  const [unmatched, setunmatched] = useState();
+  const [percent, setpercent] = useState();
+
   const session_id = "12345";
   const username = "yokesh@gmail.com";
   const password = "vidhai";
   const user = username.split("@");
   const solution = "exercise1";
+  let percentage = 0;
+  let unmatch = [];
   // const eval_url  = "https://api.vidhai.office.usln.in/evaluate";
   const eval_url = "http://localhost:9005/evaluate";
 
   useEffect(() => {
-    fetchConfigData(
-      `http://localhost:3000/editor?fileName=yokesh_question1_student.docx`,
-      "student"
-    );
-    fetchConfigData(
-      `http://localhost:3000/editor?fileName=solution_question1.docx`,
-      "solution"
-    );
+    // if (activeTab === 'editor' && !studentConfigData){
+      fetchConfigData(
+        `http://localhost:3000/editor?fileName=yokesh_question1_student.docx`,
+        "student"
+      );
+    // }
+    // if(activeTab === 'solution' && !solutionConfigData){
+      fetchConfigData(
+        `http://localhost:3000/editor?type=desktop&mode=view&fileName=solution_question1.docx&userid=uid-1&lang=en&directUrl=false`,
+        "solution"
+      );
+    // }
+    
   }, []);
-
 
   const fetchConfigData = async (url, StudentorSolution) => {
     try {
@@ -58,59 +67,6 @@ function TabBar() {
     } catch (error) {
       console.error("Error fetching config data:", error);
     }
-  };
-
-  const saveas = () => {
-
-    var iframe = document.querySelector('iframe[name="frameEditor"]');
-    console.log("iframe = ",iframe)
-
-    function handleMessage(event){
-      if(event.origin !== 'https://localhost:3000'){
-        return;
-      }
-
-      const messageData = event.data;
-
-      console.log("received msg from iframe", messageData);
-    }
-
-    window.addEventListener('message', handleMessage);
-    var messageToSend = 'Hello iframe!';
-    // console.log( iframe.contentWindow.postMessage())
-    // Send the message to the iframe
-    iframe.contentWindow.postMessage(messageToSend, 'http://localhost:3000');
-    console.log(messageToSend)
-    
-// Access the iframe's contentDocument
-    // var iframeDocument = iframe.contentDocument || iframe.contentWindow.document;
-    iframe.addEventListener('load', function() {
-      console.log('Iframe loaded');
-      try {
-        var iframeDocument = iframe.contentDocument || iframe.contentWindow.document;
-        console.log(iframeDocument);
-        // Now you can safely access the iframe's document.
-      } catch (error) {
-        console.error('Error accessing iframe content:', error);
-      }
-    });
-    
-
-    
-//     // Wait for the iframe's content to load
-//     iframeDocument.addEventListener('DOMContentLoaded', function() {
-//         // Now, you can interact with elements inside the iframe
-//         var link = iframeDocument.querySelector('ul li a[data-tab="file"][data-title="File"]');
-//         if (link) {
-//             link.click();
-//         }
-//     });
-
-  
-    // var link = document.querySelector('ul li a[data-tab="file"][data-title="File"]'); 
-    // if(link){
-    //   link.click();
-    // }
   };
 
   const handleTabClick = (tab) => {
@@ -146,11 +102,11 @@ function TabBar() {
     };
   };
 
-  function EditorTabContent() {
+  const EditorTabContent = useMemo(() => {
+    if(studentConfigData){
     return (
-      <div className="tab-body" style={{ height: "100vh" }}>
+      <div className="tab-body" style={{ height: "95vh" }}>
         {/* Content for the Editor tab */}
-        {studentConfigData && (
           <DocumentEditor
             id="docxEditor"
             documentServerUrl="http://192.168.1.125:8050"
@@ -161,15 +117,17 @@ function TabBar() {
               savecopyAs(event);
             }}
           />
-        )}
       </div>
     );
-  }
+    }
+    return null;
+  },[studentConfigData]);
 
-  function SolutionTabContent() {
+  const SolutionTabContent = useMemo(() => {
+    if (solutionConfigData){
     return (
-      <div className="tab-body" style={{ height: "100vh" }}>
-        {/* Content for the Editor tab */}
+      <div className="tab-body" style={{ height: "95vh" }}>
+        {/* Content for the Solution tab */}
         {studentConfigData && (
           <DocumentEditor
             id="docxEditor"
@@ -178,8 +136,17 @@ function TabBar() {
           />
         )}
       </div>
+    
     );
-  }
+    }
+    return null;
+  },[solutionConfigData]);
+
+  const handleEvaluateClick = () => {
+    // console.log("e",e);
+    // e.preventDefault();
+    setShowPopup(!showPopup);
+  };
 
   function evaluate() {
     console.log("evaluation...");
@@ -197,7 +164,12 @@ function TabBar() {
     })
       .then((response) => response.json())
       .then((data) => {
-        console.log(data);
+        console.log("data = ",data);
+        setunmatched(data.unmatched);
+        percentage = (data.percentage).toFixed(2);
+        setpercent(percentage);
+  
+        handleEvaluateClick();
       })
       .catch((error) => {
         console.error("Error:", error);
@@ -206,7 +178,7 @@ function TabBar() {
 
   return (
     <div>
-      <h1 className="Tabs">
+      <div className="Tabs">
         <button
           id="editorbtn"
           className={`tab ${activeTab === "editor" ? "active" : ""}`}
@@ -224,19 +196,59 @@ function TabBar() {
         <button
           id="evaluatebtn"
           className={`tab ${activeTab === "evaluate" ? "active" : ""}`}
-          onClick={() => {
-            // evaluate();
-            saveas();
-          }}
+          onClick={
+            evaluate
+            // saveas();
+          }
         >
           EVALUATE
         </button>
-      </h1>
+      </div>
       <div className="tab-content">
-        {activeTab === "editor" && (
-          <EditorTabContent />
+
+        {activeTab === "editor" && EditorTabContent}
+        {activeTab === "solution" && SolutionTabContent}
+        {/* Popup */}
+        {showPopup && (
+          <div className="popup" style={{ padding: "10px", borderRadius: "10px" }}>
+            {/* Add your popup content here */}
+            <h3 style={{ textAlign: "center" }}>RESULT</h3>
+            {
+              <h3
+                style={{
+                  color: percent > 60 ? "green" : "red",
+                  paddingLeft: "15px",
+                }}
+              >
+                {"Percentage matched = " + percent}
+              </h3>
+            }
+            <div className="popup-content">
+             {
+              unmatched.map((item, index) => (
+                <p key={index} style={{ color: "black" }}>
+                  {item}
+                </p>
+              ))
+             }
+            </div>
+            <div style={{ textAlign: "center", marginTop: "8px", }}>
+                <button
+                  style={{
+                    padding: "8px",
+                    width: "70px",
+                    textAlign: "center",
+                    backgroundColor: "orange",
+                    borderRadius: "5px",
+                    fontWeight: "bold",
+                  }}
+                  onClick={handleEvaluateClick}
+                >
+                  OK
+                </button>
+              </div>
+          </div>
         )}
-        {activeTab === "solution" && <SolutionTabContent />}
       </div>
     </div>
   );
