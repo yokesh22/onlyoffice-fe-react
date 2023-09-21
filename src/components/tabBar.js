@@ -109,7 +109,7 @@ function TabBar() {
         {/* Content for the Editor tab */}
           <DocumentEditor
             id="docxEditor"
-            documentServerUrl="http://192.168.1.125:8050"
+            documentServerUrl="http://localhost:8050"
             config={studentConfigData}
             events_onRequestSaveAs={(event) => {
               console.log("event = ", event);
@@ -131,7 +131,7 @@ function TabBar() {
         {studentConfigData && (
           <DocumentEditor
             id="docxEditor"
-            documentServerUrl="http://192.168.1.125:8050"
+            documentServerUrl="http://localhost:8050"
             config={solutionConfigData}
           />
         )}
